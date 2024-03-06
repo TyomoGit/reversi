@@ -26,6 +26,7 @@ pub struct SimpleReversiGame {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReversiGameError {
     StoneAlreadyPlaced,
+    InvalidMove,
     IndexOutOfBound,
     NoStoneToFlip,
     GameOverWithWinner(PlayerKind),
@@ -42,6 +43,10 @@ impl SimpleReversiGame {
     }
 
     pub fn put_stone(&mut self, x: usize, y: usize) -> Result<()> {
+        if !self.check_can_put(x, y) {
+            return Err(ReversiGameError::InvalidMove);
+        }
+
         self.board.place_stone(x, y, self.board.turn())?;
 
         for d in DIRECTIONS {
@@ -94,13 +99,50 @@ impl SimpleReversiGame {
     }
 
     fn check_can_put(&self, x: usize, y: usize) -> bool {
-        unimplemented!();
+        if !self.board.in_range(x, y) {
+            return false;
+        }
+
+        if self.board.get_at(x, y).is_some() {
+            return false;
+        }
+
+        for d in DIRECTIONS {
+            let mut stack: Vec<Point> = Vec::new();
+
+            let mut x = x as i32 + d.0;
+            let mut y = y as i32 + d.1;
+
+            if !self.board.in_range(x as usize, y as usize) {
+                continue;
+            }
+
+            while self.board.get_at(x as usize, y as usize) == Some(self.board.turn().opposite()) {
+                stack.push(Point::new(x as usize, y as usize));
+                x += d.0;
+                y += d.1;
+            }
+
+            if self.board.get_at(x as usize, y as usize) == Some(self.board.turn()) && !stack.is_empty() {
+                return true;
+            }
+        }
+
+        false
     }
 
     fn get_can_put_stones(&self) -> Vec<Point> {
         let mut result: Vec<Point> = Vec::new();
 
-        unimplemented!();
+        for y in 0..self.board.size() {
+            for x in 0..self.board.size() {
+                if self.check_can_put(x, y) {
+                    result.push(Point::new(x, y));
+                }
+            }
+        }
+
+        result
     }
 
     pub fn board(&self) -> &dyn ReversiBoard {

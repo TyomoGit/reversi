@@ -50,21 +50,22 @@ fn main() {
         match error {
             ReversiGameError::StoneAlreadyPlaced
             | ReversiGameError::IndexOutOfBound
+            | ReversiGameError::InvalidMove
             | ReversiGameError::NoStoneToFlip => {
                 println!("{:?}", error);
             }
 
             ReversiGameError::GameOverWithWinner(winner) => {
                 println!("{} wins!", winner);
+                println!("{}", &game);
                 break;
             }
 
             ReversiGameError::GameOverWithDraw => {
                 println!("Draw!");
+                println!("{}", &game);
                 break;
             }
         }
-
-        println!("{}", &game);
     }
 }
