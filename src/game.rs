@@ -75,7 +75,7 @@ impl SimpleReversiGame {
         }
 
         if self.board.is_game_over() {
-            self.game_over()?;
+            self.winner()?;
         }
 
         self.board.set_turn(self.board.turn().opposite());
@@ -83,7 +83,7 @@ impl SimpleReversiGame {
         Ok(())
     }
 
-    fn game_over(&self) -> Result<()> {
+    fn winner(&self) -> Result<()> {
         match (
             self.board.count(PlayerKind::Black),
             self.board.count(PlayerKind::White),
@@ -98,7 +98,7 @@ impl SimpleReversiGame {
         }
     }
 
-    fn check_can_put(&self, x: usize, y: usize) -> bool {
+    pub fn check_can_put(&self, x: usize, y: usize) -> bool {
         if !self.board.in_range(x, y) {
             return false;
         }
@@ -131,7 +131,7 @@ impl SimpleReversiGame {
         false
     }
 
-    fn get_can_put_stones(&self) -> Vec<Point> {
+    pub fn get_can_put_stones(&self) -> Vec<Point> {
         let mut result: Vec<Point> = Vec::new();
 
         for y in 0..self.board.size() {
