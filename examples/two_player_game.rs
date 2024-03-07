@@ -1,17 +1,17 @@
-use reversi::{
-    game::{ReversiGameError, SimpleReversiGame},
-    player::PlayerKind,
-};
+use reversi::{board::ReversiError, computer::{PlayerType, SimpleComputer}, game::SimpleReversiGame, stone::Stone};
 use std::io::stdin;
 
 fn main() {
-    let mut game = SimpleReversiGame::new();
+    let mut game = SimpleReversiGame::new(
+        PlayerType::Human,
+        PlayerType::Computer(Box::new(SimpleComputer::new(Stone::White))),
+    );
 
     loop {
         println!("{}", &game);
         println!(
             "{}'s turn",
-            if game.board().turn() == PlayerKind::Black {
+            if game.turn() == Stone::Black {
                 "⚫︎"
             } else {
                 "⚪︎"
@@ -48,21 +48,21 @@ fn main() {
         };
 
         match error {
-            ReversiGameError::StoneAlreadyPlaced
-            | ReversiGameError::IndexOutOfBound
-            | ReversiGameError::InvalidMove
-            | ReversiGameError::NoStoneToFlip
-            | ReversiGameError::NextPlayerCantPutStone => {
+            ReversiError::StoneAlreadyPlaced
+            | ReversiError::IndexOutOfBound
+            | ReversiError::InvalidMove
+            | ReversiError::NoStoneToFlip
+            | ReversiError::NextPlayerCantPutStone => {
                 println!("{:?}", error);
             }
 
-            ReversiGameError::GameOverWithWinner(winner) => {
+            ReversiError::GameOverWithWinner(winner) => {
                 println!("{} wins!", winner);
                 println!("{}", &game);
                 break;
             }
 
-            ReversiGameError::GameOverWithDraw => {
+            ReversiError::GameOverWithDraw => {
                 println!("Draw!");
                 println!("{}", &game);
                 break;

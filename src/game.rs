@@ -1,179 +1,89 @@
 use std::fmt::{Display, Write};
 
 use crate::{
-    board::{ArrayBasedBoard, ReversiBoard},
-    player::PlayerKind,
-    point::Point,
+    board::{ArrayBasedBoard, ReversiBoard, ReversiError}, computer::PlayerType, point::Point, stone::Stone
 };
 
-pub type Result<T> = std::result::Result<T, ReversiGameError>;
-
-const DIRECTIONS: [(i32, i32); 8] = [
-    (-1, -1),
-    (-1, 0),
-    (-1, 1),
-    (0, -1),
-    (0, 1),
-    (1, -1),
-    (1, 0),
-    (1, 1),
-];
+pub type Result<T> = std::result::Result<T, ReversiError>;
 
 pub struct SimpleReversiGame {
     board: Box<dyn ReversiBoard>,
-}
+    turn: Stone,
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ReversiGameError {
-    StoneAlreadyPlaced,
-    InvalidMove,
-    IndexOutOfBound,
-    NoStoneToFlip,
-    NextPlayerCantPutStone,
-
-    GameOverWithWinner(PlayerKind),
-    GameOverWithDraw,
+    black: PlayerType,
+    white: PlayerType,
 }
 
 impl SimpleReversiGame {
-    pub fn new() -> Self {
+    pub fn new(black: PlayerType, white: PlayerType) -> Self {
         let mut board: Box<dyn ReversiBoard> = Box::new(ArrayBasedBoard::new());
         board.init_four_central_squares();
-        board.set_turn(PlayerKind::Black);
 
-        Self { board }
+        Self {
+            board,
+            turn: Stone::Black,
+            black,
+            white,
+        }
     }
 
     pub fn put_stone(&mut self, x: usize, y: usize) -> Result<()> {
-        if !self.check_can_put(x, y) {
-            return Err(ReversiGameError::InvalidMove);
-        }
-
-        self.board.place_stone(x, y, self.board.turn())?;
-
-        for d in DIRECTIONS {
-            let mut stack: Vec<Point> = Vec::new();
-
-            let mut x = x as i32 + d.0;
-            let mut y = y as i32 + d.1;
-
-            if !self.board.in_range(x as usize, y as usize) {
-                continue;
-            }
-
-            while self.board.get_at(x as usize, y as usize) == Some(self.board.turn().opposite()) {
-                stack.push(Point::new(x as usize, y as usize));
-                x += d.0;
-                y += d.1;
-            }
-
-            if self.board.get_at(x as usize, y as usize) != Some(self.board.turn()) {
-                continue;
-            }
-
-            for p in stack {
-                self.board.flip(p.x, p.y)?;
-            }
-        }
-
-        if self.board.is_game_over() {
-            self.winner()?;
-        }
-
-        self.board.set_turn(self.board.turn().opposite());
-
-        if self.get_can_put_stones().is_empty() {
-            // Next player cannot place stones
-
-            self.board.set_turn(self.board.turn().opposite());
-
-            if self.get_can_put_stones().is_empty() {
-                // Both players cannot place stones
-                return self.winner();
-            }
-
-            // Next next player(the player who called this function) can place stones
-            return Err(ReversiGameError::NextPlayerCantPutStone);
-        }
-
-        if self.board.count(self.board.turn()) == 0 {
-            // There are no next player's stones
-            return Err(ReversiGameError::GameOverWithWinner(self.board.turn().opposite()));
-        }
-
+        self.board.put_stone(x, y, self.turn)?;
+        self.take_turn();
         Ok(())
     }
 
-    fn winner(&self) -> Result<()> {
-        match (
-            self.board.count(PlayerKind::Black),
-            self.board.count(PlayerKind::White),
-        ) {
-            (black, white) if black > white => {
-                Err(ReversiGameError::GameOverWithWinner(PlayerKind::Black))
-            }
-            (black, white) if black < white => {
-                Err(ReversiGameError::GameOverWithWinner(PlayerKind::White))
-            }
-            _ => Err(ReversiGameError::GameOverWithDraw),
-        }
+    pub fn winner(&self) -> Result<()> {
+        self.board.winner()
     }
 
     pub fn check_can_put(&self, x: usize, y: usize) -> bool {
-        if !self.board.in_range(x, y) {
-            return false;
-        }
-
-        if self.board.get_at(x, y).is_some() {
-            return false;
-        }
-
-        for d in DIRECTIONS {
-            let mut stack: Vec<Point> = Vec::new();
-
-            let mut x = x as i32 + d.0;
-            let mut y = y as i32 + d.1;
-
-            if !self.board.in_range(x as usize, y as usize) {
-                continue;
-            }
-
-            while self.board.get_at(x as usize, y as usize) == Some(self.board.turn().opposite()) {
-                stack.push(Point::new(x as usize, y as usize));
-                x += d.0;
-                y += d.1;
-            }
-
-            if self.board.get_at(x as usize, y as usize) == Some(self.board.turn()) && !stack.is_empty() {
-                return true;
-            }
-        }
-
-        false
+        self.board.check_can_put(x, y, self.turn)
     }
 
     pub fn get_can_put_stones(&self) -> Vec<Point> {
-        let mut result: Vec<Point> = Vec::new();
-
-        for y in 0..self.board.size() {
-            for x in 0..self.board.size() {
-                if self.check_can_put(x, y) {
-                    result.push(Point::new(x, y));
-                }
-            }
-        }
-
-        result
+        self.board.get_can_put_stones(self.turn)
     }
 
     pub fn board(&self) -> &dyn ReversiBoard {
         self.board.as_ref()
     }
+
+    #[inline]
+    pub fn take_turn(&mut self) {
+        self.turn = self.turn.opposite();
+
+        self.on_player_turn();
+    }
+
+    fn on_player_turn(&mut self) {
+        let player = match self.turn {
+            Stone::Black => &self.black,
+            Stone::White => &self.white,
+        };
+
+        let PlayerType::Computer(computer) = player else {
+            return;
+        };
+
+        let point = computer.decide(self.board());
+        self.put_stone(point.x, point.y).unwrap();
+    }
+
+    #[inline]
+    pub fn set_turn(&mut self, turn: Stone) {
+        self.turn = turn;
+    }
+
+    #[inline]
+    pub fn turn(&self) -> Stone {
+        self.turn
+    }
 }
 
 impl Default for SimpleReversiGame {
     fn default() -> Self {
-        Self::new()
+        Self::new(PlayerType::Human, PlayerType::Human)
     }
 }
 
@@ -209,38 +119,44 @@ mod tests {
 
     #[test]
     fn t1() {
-        let mut game = SimpleReversiGame::new();
-        assert_eq!(game.board.turn(), PlayerKind::Black);
+        let mut game = SimpleReversiGame::default();
+        assert_eq!(game.turn(), Stone::Black);
         game.put_stone(3, 2).unwrap();
-        assert_eq!(game.board.turn(), PlayerKind::White);
+        assert_eq!(game.turn(), Stone::White);
         game.put_stone(2, 4).unwrap();
     }
 
     #[test]
     fn finish() {
-        let mut game = SimpleReversiGame::new();
+        let mut game = SimpleReversiGame::default();
         let size = game.board().size();
 
-        *game.board.board_mut() = vec![vec![Some(PlayerKind::White); size]; size];
+        *game.board.board_mut() = vec![vec![Some(Stone::White); size]; size];
         game.board.board_mut()[0][0] = None;
-        game.board.board_mut()[0][7] = Some(PlayerKind::Black);
+        game.board.board_mut()[0][7] = Some(Stone::Black);
 
         let result = game.put_stone(0, 0);
         assert_eq!(
             result,
-            Err(ReversiGameError::GameOverWithWinner(PlayerKind::White))
+            Err(ReversiError::GameOverWithWinner(Stone::White))
         );
-        assert_eq!(game.board().count(PlayerKind::Black), 8);
-        assert_eq!(game.board().count(PlayerKind::White), size * size - 8);
+        assert_eq!(game.board().count(Stone::Black), 8);
+        assert_eq!(game.board().count(Stone::White), size * size - 8);
     }
 
     #[test]
     fn cant_put() {
-        let mut game = SimpleReversiGame::new();
+        let mut game = SimpleReversiGame::default();
         *game.board.board_mut() = vec![vec![None; 8]; 8];
-        game.board.board_mut()[0][0] = Some(PlayerKind::Black);
-        game.board.board_mut()[0][1] = Some(PlayerKind::White);
+        game.board.board_mut()[0][0] = Some(Stone::Black);
+        game.board.board_mut()[0][1] = Some(Stone::White);
 
-        assert_eq!(game.put_stone(2, 0), Err(ReversiGameError::NextPlayerCantPutStone));
+        game.board.board_mut()[7][7] = Some(Stone::Black);
+        game.board.board_mut()[7][6] = Some(Stone::White);
+
+        assert_eq!(
+            game.put_stone(2, 0),
+            Err(ReversiError::NextPlayerCantPutStone)
+        );
     }
 }
