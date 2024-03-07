@@ -1,8 +1,8 @@
-use crate::{board::{ReversiBoard}, stone::Stone, point::Point};
+use crate::{board::ReversiBoard, point::Point, stone::Stone};
 
 pub enum PlayerType {
     Human,
-    Computer(Box<dyn Computer>)
+    Computer(Box<dyn Computer>),
 }
 
 pub trait Computer {
@@ -40,7 +40,7 @@ impl SimpleComputer {
 impl Computer for SimpleComputer {
     fn decide(&self, board: &dyn ReversiBoard) -> Point {
         let can_put_stones = board.get_can_put_stones(self.color);
-        
+
         let mut max_count: usize = 0;
         let mut max_index: usize = 0;
 

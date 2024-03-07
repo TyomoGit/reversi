@@ -1,4 +1,9 @@
-use reversi::{board::ReversiError, computer::{PlayerType, SimpleComputer}, game::SimpleReversiGame, stone::Stone};
+use reversi::{
+    board::ReversiError,
+    computer::{PlayerType, SimpleComputer},
+    game::SimpleReversiGame,
+    stone::Stone,
+};
 use std::io::stdin;
 
 fn main() {

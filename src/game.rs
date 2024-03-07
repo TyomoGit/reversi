@@ -1,7 +1,10 @@
 use std::fmt::{Display, Write};
 
 use crate::{
-    board::{ArrayBasedBoard, ReversiBoard, ReversiError}, computer::PlayerType, point::Point, stone::Stone
+    board::{ArrayBasedBoard, ReversiBoard, ReversiError},
+    computer::PlayerType,
+    point::Point,
+    stone::Stone,
 };
 
 pub type Result<T> = std::result::Result<T, ReversiError>;
@@ -79,6 +82,16 @@ impl SimpleReversiGame {
     pub fn turn(&self) -> Stone {
         self.turn
     }
+
+    #[inline]
+    pub fn black(&self) -> &PlayerType {
+        &self.black
+    }
+
+    #[inline]
+    pub fn white(&self) -> &PlayerType {
+        &self.white
+    }
 }
 
 impl Default for SimpleReversiGame {
@@ -136,10 +149,7 @@ mod tests {
         game.board.board_mut()[0][7] = Some(Stone::Black);
 
         let result = game.put_stone(0, 0);
-        assert_eq!(
-            result,
-            Err(ReversiError::GameOverWithWinner(Stone::White))
-        );
+        assert_eq!(result, Err(ReversiError::GameOverWithWinner(Stone::White)));
         assert_eq!(game.board().count(Stone::Black), 8);
         assert_eq!(game.board().count(Stone::White), size * size - 8);
     }

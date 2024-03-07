@@ -1,6 +1,9 @@
-use std::{fmt::{Debug, Display}, vec};
+use std::{
+    fmt::{Debug, Display},
+    vec,
+};
 
-use crate::{game::Result, stone::Stone, point::Point};
+use crate::{game::Result, point::Point, stone::Stone};
 
 pub const DEFAULT_BOARD_SIZE: usize = 8;
 
@@ -178,7 +181,7 @@ impl ReversiBoard for ArrayBasedBoard {
         let cells_count = self.size() * self.size();
         self.count(Stone::Black) + self.count(Stone::White) == cells_count
     }
-    
+
     fn put_stone(&mut self, x: usize, y: usize, player: Stone) -> Result<()> {
         if !self.check_can_put(x, y, player) {
             return Err(ReversiError::InvalidMove);
@@ -194,7 +197,7 @@ impl ReversiBoard for ArrayBasedBoard {
 
         get_flippable(self, x, y, player)
             .iter()
-            .for_each(|&Point{x, y}| {
+            .for_each(|&Point { x, y }| {
                 self.flip(x, y).unwrap();
             });
 
@@ -225,22 +228,15 @@ impl ReversiBoard for ArrayBasedBoard {
 
         Ok(())
     }
-    
+
     fn winner(&self) -> Result<()> {
-        match (
-            self.count(Stone::Black),
-            self.count(Stone::White),
-        ) {
-            (black, white) if black > white => {
-                Err(ReversiError::GameOverWithWinner(Stone::Black))
-            }
-            (black, white) if black < white => {
-                Err(ReversiError::GameOverWithWinner(Stone::White))
-            }
+        match (self.count(Stone::Black), self.count(Stone::White)) {
+            (black, white) if black > white => Err(ReversiError::GameOverWithWinner(Stone::Black)),
+            (black, white) if black < white => Err(ReversiError::GameOverWithWinner(Stone::White)),
             _ => Err(ReversiError::GameOverWithDraw),
         }
     }
-    
+
     fn check_can_put(&self, x: usize, y: usize, player: Stone) -> bool {
         if !self.in_range(x, y) {
             return false;
@@ -273,7 +269,7 @@ impl ReversiBoard for ArrayBasedBoard {
 
         false
     }
-    
+
     fn get_can_put_stones(&self, player: Stone) -> Vec<Point> {
         let mut result: Vec<Point> = Vec::new();
 
@@ -287,7 +283,7 @@ impl ReversiBoard for ArrayBasedBoard {
 
         result
     }
-    
+
     fn count_flippable(&self, x: usize, y: usize) -> usize {
         let Some(color) = self.get_at(x, y) else {
             return 0;
