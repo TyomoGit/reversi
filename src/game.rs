@@ -29,9 +29,10 @@ pub enum ReversiGameError {
     InvalidMove,
     IndexOutOfBound,
     NoStoneToFlip,
+    NextPlayerCantPutStone,
+
     GameOverWithWinner(PlayerKind),
     GameOverWithDraw,
-    NextPlayerCantPutStone,
 }
 
 impl SimpleReversiGame {
@@ -82,8 +83,22 @@ impl SimpleReversiGame {
         self.board.set_turn(self.board.turn().opposite());
 
         if self.get_can_put_stones().is_empty() {
+            // Next player cannot place stones
+
             self.board.set_turn(self.board.turn().opposite());
+
+            if self.get_can_put_stones().is_empty() {
+                // Both players cannot place stones
+                return self.winner();
+            }
+
+            // Next next player(the player who called this function) can place stones
             return Err(ReversiGameError::NextPlayerCantPutStone);
+        }
+
+        if self.board.count(self.board.turn()) == 0 {
+            // There are no next player's stones
+            return Err(ReversiGameError::GameOverWithWinner(self.board.turn().opposite()));
         }
 
         Ok(())
