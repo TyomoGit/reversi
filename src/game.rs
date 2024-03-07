@@ -31,6 +31,7 @@ pub enum ReversiGameError {
     NoStoneToFlip,
     GameOverWithWinner(PlayerKind),
     GameOverWithDraw,
+    NextPlayerCantPutStone,
 }
 
 impl SimpleReversiGame {
@@ -79,6 +80,11 @@ impl SimpleReversiGame {
         }
 
         self.board.set_turn(self.board.turn().opposite());
+
+        if self.get_can_put_stones().is_empty() {
+            self.board.set_turn(self.board.turn().opposite());
+            return Err(ReversiGameError::NextPlayerCantPutStone);
+        }
 
         Ok(())
     }
@@ -202,13 +208,24 @@ mod tests {
 
         *game.board.board_mut() = vec![vec![Some(PlayerKind::White); size]; size];
         game.board.board_mut()[0][0] = None;
+        game.board.board_mut()[0][7] = Some(PlayerKind::Black);
 
         let result = game.put_stone(0, 0);
         assert_eq!(
             result,
             Err(ReversiGameError::GameOverWithWinner(PlayerKind::White))
         );
-        assert_eq!(game.board().count(PlayerKind::Black), 1);
-        assert_eq!(game.board().count(PlayerKind::White), size * size - 1);
+        assert_eq!(game.board().count(PlayerKind::Black), 8);
+        assert_eq!(game.board().count(PlayerKind::White), size * size - 8);
+    }
+
+    #[test]
+    fn cant_put() {
+        let mut game = SimpleReversiGame::new();
+        *game.board.board_mut() = vec![vec![None; 8]; 8];
+        game.board.board_mut()[0][0] = Some(PlayerKind::Black);
+        game.board.board_mut()[0][1] = Some(PlayerKind::White);
+
+        assert_eq!(game.put_stone(2, 0), Err(ReversiGameError::NextPlayerCantPutStone));
     }
 }

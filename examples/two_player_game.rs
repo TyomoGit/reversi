@@ -51,7 +51,8 @@ fn main() {
             ReversiGameError::StoneAlreadyPlaced
             | ReversiGameError::IndexOutOfBound
             | ReversiGameError::InvalidMove
-            | ReversiGameError::NoStoneToFlip => {
+            | ReversiGameError::NoStoneToFlip
+            | ReversiGameError::NextPlayerCantPutStone => {
                 println!("{:?}", error);
             }
 
