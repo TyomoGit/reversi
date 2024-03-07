@@ -3,6 +3,8 @@ use std::{
     vec,
 };
 
+use dyn_clone::DynClone;
+
 use crate::{game::Result, point::Point, stone::Stone};
 
 pub const DEFAULT_BOARD_SIZE: usize = 8;
@@ -32,7 +34,7 @@ pub enum ReversiError {
     GameOverWithDraw,
 }
 
-pub trait ReversiBoard {
+pub trait ReversiBoard: DynClone {
     fn size(&self) -> usize;
     fn board(&self) -> &Board;
     fn board_mut(&mut self) -> &mut Board;
@@ -40,7 +42,7 @@ pub trait ReversiBoard {
     fn get_at(&self, x: usize, y: usize) -> Option<Stone>;
     fn in_range(&self, x: usize, y: usize) -> bool;
     fn count(&self, player: Stone) -> usize;
-    fn count_flippable(&self, x: usize, y: usize) -> usize;
+    fn count_flippable(&self, x: usize, y: usize, player: Stone) -> usize;
     fn is_game_over(&self) -> bool;
 
     fn init_four_central_squares(&mut self);
@@ -284,12 +286,10 @@ impl ReversiBoard for ArrayBasedBoard {
         result
     }
 
-    fn count_flippable(&self, x: usize, y: usize) -> usize {
-        let Some(color) = self.get_at(x, y) else {
-            return 0;
-        };
+    fn count_flippable(&self, x: usize, y: usize, player: Stone) -> usize {
+        if self.get_at(x, y).is_some() { return 0; }
 
-        get_flippable(self, x, y, color).len()
+        get_flippable(self, x, y, player).len()
     }
 }
 

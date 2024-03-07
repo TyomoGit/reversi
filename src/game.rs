@@ -31,9 +31,15 @@ impl SimpleReversiGame {
     }
 
     pub fn put_stone(&mut self, x: usize, y: usize) -> Result<()> {
-        self.board.put_stone(x, y, self.turn)?;
-        self.take_turn();
-        Ok(())
+        let result = self.board.put_stone(x, y, self.turn);
+
+        if let PlayerType::Computer(_) = self.current_player_type() {
+            self.take_turn()?;
+            result
+        } else {
+            result?;
+            self.take_turn()
+        }
     }
 
     pub fn winner(&self) -> Result<()> {
@@ -53,24 +59,30 @@ impl SimpleReversiGame {
     }
 
     #[inline]
-    pub fn take_turn(&mut self) {
+    pub fn take_turn(&mut self) -> Result<()> {
         self.turn = self.turn.opposite();
 
-        self.on_player_turn();
+        self.on_player_turn()
     }
 
-    fn on_player_turn(&mut self) {
-        let player = match self.turn {
+    #[inline]
+    fn current_player_type(&self) -> &PlayerType {
+        match self.turn {
             Stone::Black => &self.black,
             Stone::White => &self.white,
-        };
+        }
+    }
+
+    fn on_player_turn(&mut self) -> Result<()> {
+        let player = self.current_player_type();
 
         let PlayerType::Computer(computer) = player else {
-            return;
+            return Ok(());
         };
 
         let point = computer.decide(self.board());
-        self.put_stone(point.x, point.y).unwrap();
+
+        self.put_stone(point.x, point.y)
     }
 
     #[inline]
@@ -128,6 +140,8 @@ impl Display for SimpleReversiGame {
 mod tests {
     use std::vec;
 
+    use crate::computer::{SimpleComputer, WeightedComputer};
+
     use super::*;
 
     #[test]
@@ -168,5 +182,45 @@ mod tests {
             game.put_stone(2, 0),
             Err(ReversiError::NextPlayerCantPutStone)
         );
+    }
+
+    #[test]
+    fn com_human_err() {
+        let mut game = SimpleReversiGame::new(
+            PlayerType::Human,
+            PlayerType::Computer(Box::new(WeightedComputer::new(Stone::White))),
+        );
+
+        *game.board.board_mut() = vec![vec![None; 8]; 8];
+        game.board.board_mut()[0][0] = Some(Stone::Black);
+        game.board.board_mut()[0][1] = Some(Stone::White);
+
+        game.board.board_mut()[7][0] = Some(Stone::Black);
+        game.board.board_mut()[7][1] = Some(Stone::White);
+
+        dbg!(&game.board);
+        let result = game.put_stone(2, 0);
+        assert_eq!(result, Err(ReversiError::NextPlayerCantPutStone));
+        assert_eq!(game.turn(), Stone::Black);
+    }
+
+    #[test]
+    fn com_com_err() {
+        let mut game = SimpleReversiGame::new(
+            PlayerType::Human,
+            PlayerType::Computer(Box::new(WeightedComputer::new(Stone::White))),
+        );
+
+        *game.board.board_mut() = vec![vec![None; 8]; 8];
+        game.board.board_mut()[0][0] = Some(Stone::White);
+        game.board.board_mut()[0][1] = Some(Stone::Black);
+
+        game.board.board_mut()[7][7] = Some(Stone::White);
+        game.board.board_mut()[7][6] = Some(Stone::Black);
+
+        let result = game.take_turn();
+
+        assert_eq!(result, Err(ReversiError::NextPlayerCantPutStone));
+        assert_eq!(game.turn(), Stone::Black);
     }
 }

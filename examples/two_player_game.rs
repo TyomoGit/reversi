@@ -1,6 +1,6 @@
 use reversi::{
     board::ReversiError,
-    computer::{PlayerType, SimpleComputer},
+    computer::{PlayerType, SimpleComputer, WeightedComputer},
     game::SimpleReversiGame,
     stone::Stone,
 };
@@ -9,7 +9,7 @@ use std::io::stdin;
 fn main() {
     let mut game = SimpleReversiGame::new(
         PlayerType::Human,
-        PlayerType::Computer(Box::new(SimpleComputer::new(Stone::White))),
+        PlayerType::Computer(Box::new(WeightedComputer::new(Stone::White))),
     );
 
     loop {
@@ -56,8 +56,12 @@ fn main() {
             ReversiError::StoneAlreadyPlaced
             | ReversiError::IndexOutOfBound
             | ReversiError::InvalidMove
-            | ReversiError::NoStoneToFlip
-            | ReversiError::NextPlayerCantPutStone => {
+            | ReversiError::NoStoneToFlip => {
+                println!("{:?}", error);
+            }
+
+            ReversiError::NextPlayerCantPutStone => {
+                game.take_turn().unwrap();
                 println!("{:?}", error);
             }
 
