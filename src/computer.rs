@@ -87,7 +87,7 @@ impl Computer for WeightedComputer {
         for (i, p) in can_put_stones.iter().enumerate() {
             let mut cloned_board = dyn_clone::clone_box(board);
             let _ = cloned_board.put_stone(p.x, p.y, self.color);
-            
+
             let (mut me, mut enemy): (i32, i32) = (0, 0);
 
             for (y, row) in cloned_board.board().iter().enumerate() {
@@ -103,7 +103,6 @@ impl Computer for WeightedComputer {
             }
 
             let diff = me - enemy;
-            dbg!(diff, can_put_stones[i]);
             if diff > max_count {
                 max_count = diff;
                 max_index = i;

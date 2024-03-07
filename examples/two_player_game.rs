@@ -76,6 +76,10 @@ fn main() {
                 println!("{}", &game);
                 break;
             }
+
+            ReversiError::ComputerTurnIsOk(board) => {
+                println!("{}", board);
+            }
         }
     }
 }

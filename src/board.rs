@@ -1,5 +1,5 @@
 use std::{
-    fmt::{Debug, Display},
+    fmt::{Debug, Display, Write},
     vec,
 };
 
@@ -22,7 +22,7 @@ const DIRECTIONS: [(i32, i32); 8] = [
     (1, 1),
 ];
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug)]
 pub enum ReversiError {
     StoneAlreadyPlaced,
     InvalidMove,
@@ -30,8 +30,51 @@ pub enum ReversiError {
     NoStoneToFlip,
     NextPlayerCantPutStone,
 
+    ComputerTurnIsOk(Box<dyn ReversiBoard>),
+
     GameOverWithWinner(Stone),
     GameOverWithDraw,
+}
+
+impl Clone for ReversiError {
+    fn clone(&self) -> Self {
+        match self {
+            ReversiError::StoneAlreadyPlaced => ReversiError::StoneAlreadyPlaced,
+            ReversiError::InvalidMove => ReversiError::InvalidMove,
+            ReversiError::IndexOutOfBound => ReversiError::IndexOutOfBound,
+            ReversiError::NoStoneToFlip => ReversiError::NoStoneToFlip,
+            ReversiError::NextPlayerCantPutStone => ReversiError::NextPlayerCantPutStone,
+            ReversiError::ComputerTurnIsOk(board) => {
+                ReversiError::ComputerTurnIsOk(dyn_clone::clone_box(board.as_ref()))
+            }
+            ReversiError::GameOverWithWinner(winner) => ReversiError::GameOverWithWinner(*winner),
+            ReversiError::GameOverWithDraw => ReversiError::GameOverWithDraw,
+        }
+    }
+}
+
+impl PartialEq for ReversiError {
+    fn eq(&self, other: &Self) -> bool {
+        match self {
+            ReversiError::StoneAlreadyPlaced
+            | ReversiError::InvalidMove
+            | ReversiError::IndexOutOfBound
+            | ReversiError::NoStoneToFlip
+            | ReversiError::NextPlayerCantPutStone
+            | ReversiError::GameOverWithDraw => {
+                std::mem::discriminant(self) == std::mem::discriminant(other)
+            }
+            ReversiError::ComputerTurnIsOk(_) => false,
+            ReversiError::GameOverWithWinner(winner) => {
+                let ReversiError::GameOverWithWinner(other_winner) = other else {
+                    return false;
+                };
+
+                std::mem::discriminant(self) == std::mem::discriminant(other)
+                    && winner == other_winner
+            }
+        }
+    }
 }
 
 pub trait ReversiBoard: DynClone {
@@ -59,9 +102,9 @@ impl Debug for dyn ReversiBoard {
         for row in board {
             for cell in row {
                 match cell {
-                    Some(Stone::Black) => write!(f, "B")?,
-                    Some(Stone::White) => write!(f, "W")?,
-                    None => write!(f, ".")?,
+                    Some(Stone::Black) => write!(f, "⚫︎")?,
+                    Some(Stone::White) => write!(f, "⚪︎")?,
+                    None => write!(f, "[]")?,
                 }
             }
             writeln!(f)?;
@@ -73,19 +116,25 @@ impl Debug for dyn ReversiBoard {
 
 impl Display for dyn ReversiBoard {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let board = self.board();
-        for row in board {
-            for cell in row {
-                match cell {
-                    Some(Stone::Black) => write!(f, "⚫︎")?,
-                    Some(Stone::White) => write!(f, "⚪︎")?,
-                    None => write!(f, "[]")?,
-                }
-            }
-            writeln!(f)?;
+        let board = format!("{:?}", self);
+        let mut result = String::new();
+
+        write!(result, "   | ")?;
+
+        for i in 0..self.board().len() {
+            let alpha = (b'A' + i as u8) as char;
+            write!(result, "{: ^2}", alpha)?;
         }
 
-        Ok(())
+        writeln!(result)?;
+
+        writeln!(result, "---+-{}", "--".repeat(self.board().len()))?;
+
+        for (i, row) in board.lines().enumerate() {
+            writeln!(result, "{: ^2} | {}", i + 1, row)?;
+        }
+
+        write!(f, "{}", result)
     }
 }
 
@@ -287,7 +336,9 @@ impl ReversiBoard for ArrayBasedBoard {
     }
 
     fn count_flippable(&self, x: usize, y: usize, player: Stone) -> usize {
-        if self.get_at(x, y).is_some() { return 0; }
+        if self.get_at(x, y).is_some() {
+            return 0;
+        }
 
         get_flippable(self, x, y, player).len()
     }

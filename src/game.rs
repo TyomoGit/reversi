@@ -82,7 +82,11 @@ impl SimpleReversiGame {
 
         let point = computer.decide(self.board());
 
-        self.put_stone(point.x, point.y)
+        let board_before_put = dyn_clone::clone_box(self.board.as_ref());
+
+        self.put_stone(point.x, point.y)?;
+
+        Err(ReversiError::ComputerTurnIsOk(board_before_put))
     }
 
     #[inline]
@@ -114,25 +118,7 @@ impl Default for SimpleReversiGame {
 
 impl Display for SimpleReversiGame {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let board = self.board.to_string();
-        let mut result = String::new();
-
-        write!(result, "   | ")?;
-
-        for i in 0..self.board().size() {
-            let alpha = (b'A' + i as u8) as char;
-            write!(result, "{: ^2}", alpha)?;
-        }
-
-        writeln!(result)?;
-
-        writeln!(result, "---+-{}", "--".repeat(self.board().size()))?;
-
-        for (i, row) in board.lines().enumerate() {
-            writeln!(result, "{: ^2} | {}", i + 1, row)?;
-        }
-
-        write!(f, "{}", result)
+        write!(f, "{}", self.board)
     }
 }
 
