@@ -1,8 +1,5 @@
 use reversi::{
-    board::ReversiError,
-    computer::{PlayerType, WeightedComputer},
-    game::{PlayerManager, SimpleReversiGame},
-    stone::Stone,
+    computer::{PlayerType, WeightedComputer}, error::ReversiError, game::{PlayerManager, SimpleReversiGame}, stone::Stone
 };
 use std::io::stdin;
 
@@ -60,10 +57,6 @@ fn main() {
                 println!("Draw!");
                 println!("{}", &game);
                 break;
-            }
-
-            ReversiError::ComputerTurnIsOk(board) => {
-                println!("{}", board);
             }
         }
     }

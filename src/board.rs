@@ -5,7 +5,7 @@ use std::{
 
 use dyn_clone::DynClone;
 
-use crate::{game::Result, point::Point, stone::Stone};
+use crate::{error::ReversiError, game::Result, point::Point, stone::Stone};
 
 pub const DEFAULT_BOARD_SIZE: usize = 8;
 
@@ -21,67 +21,6 @@ const DIRECTIONS: [(i32, i32); 8] = [
     (1, 0),
     (1, 1),
 ];
-
-#[derive(Debug)]
-pub enum ReversiError {
-    StoneAlreadyPlaced,
-    InvalidMove,
-    IndexOutOfBound,
-    NoStoneToFlip,
-    NextPlayerCantPutStone(Stone),
-
-    ComputerTurnIsOk(Box<dyn ReversiBoard>),
-
-    GameOverWithWinner(Stone),
-    GameOverWithDraw,
-}
-
-impl Clone for ReversiError {
-    fn clone(&self) -> Self {
-        match self {
-            ReversiError::StoneAlreadyPlaced => ReversiError::StoneAlreadyPlaced,
-            ReversiError::InvalidMove => ReversiError::InvalidMove,
-            ReversiError::IndexOutOfBound => ReversiError::IndexOutOfBound,
-            ReversiError::NoStoneToFlip => ReversiError::NoStoneToFlip,
-            ReversiError::NextPlayerCantPutStone(stone) => ReversiError::NextPlayerCantPutStone(*stone),
-            ReversiError::ComputerTurnIsOk(board) => {
-                ReversiError::ComputerTurnIsOk(dyn_clone::clone_box(board.as_ref()))
-            }
-            ReversiError::GameOverWithWinner(winner) => ReversiError::GameOverWithWinner(*winner),
-            ReversiError::GameOverWithDraw => ReversiError::GameOverWithDraw,
-        }
-    }
-}
-
-impl PartialEq for ReversiError {
-    fn eq(&self, other: &Self) -> bool {
-        match self {
-            ReversiError::StoneAlreadyPlaced
-            | ReversiError::InvalidMove
-            | ReversiError::IndexOutOfBound
-            | ReversiError::NoStoneToFlip
-            | ReversiError::GameOverWithDraw => {
-                std::mem::discriminant(self) == std::mem::discriminant(other)
-            }
-            ReversiError::ComputerTurnIsOk(_) => false,
-            ReversiError::GameOverWithWinner(winner) => {
-                let ReversiError::GameOverWithWinner(other_winner) = other else {
-                    return false;
-                };
-
-                std::mem::discriminant(self) == std::mem::discriminant(other)
-                    && winner == other_winner
-            }
-            Self::NextPlayerCantPutStone(stone) => {
-                let ReversiError::NextPlayerCantPutStone(other_stone) = other else {
-                    return false;
-                };
-
-                std::mem::discriminant(self) == std::mem::discriminant(other) && stone == other_stone
-            }
-        }
-    }
-}
 
 pub trait ReversiBoard: DynClone {
     fn size(&self) -> usize;

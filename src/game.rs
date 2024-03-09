@@ -1,10 +1,7 @@
 use std::fmt::Display;
 
 use crate::{
-    board::{ArrayBasedBoard, ReversiBoard, ReversiError},
-    computer::PlayerType,
-    point::Point,
-    stone::Stone,
+    board::{ArrayBasedBoard, ReversiBoard}, computer::PlayerType, error::ReversiError, point::Point, stone::Stone
 };
 
 pub type Result<T> = std::result::Result<T, ReversiError>;
