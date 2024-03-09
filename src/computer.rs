@@ -58,20 +58,28 @@ impl Computer for SimpleComputer {
 
 pub struct WeightedComputer {
     color: Stone,
+    weights: [[i32; 8]; 8],
 }
 
 impl WeightedComputer {
     pub fn new(color: Stone) -> Self {
-        Self { color }
+        Self { color, weights: WeightedComputer::DEFAULT_WEIGHTS }
     }
 
-    const WEIGHTS: [[i32; 8]; 8] = [
+    pub fn with_weights(color: Stone, weights: [[i32; 8]; 8]) -> Self {
+        Self {
+            color,
+            weights
+        }
+    }
+
+    const DEFAULT_WEIGHTS: [[i32; 8]; 8] = [
         [150, -50, 20, 10, 10, 20, -50, 150],
         [-50, -70, -3, -3, -3, -3, -70, -50],
-        [20, -3, 3, 3, 3, 3, -3, 20],
+        [20, -3, 7, 3, 3, 7, -3, 20],
         [10, -3, 3, 1, 1, 3, -3, 10],
         [10, -3, 3, 1, 1, 3, -3, 10],
-        [20, -3, 3, 3, 3, 3, -3, 20],
+        [20, -3, 7, 3, 3, 7, -3, 20],
         [-50, -70, -3, -3, -3, -3, -70, -50],
         [150, -50, 20, 10, 10, 20, -50, 150],
     ];
@@ -94,9 +102,9 @@ impl Computer for WeightedComputer {
                 for (x, &stone) in row.iter().enumerate() {
                     if let Some(s) = stone {
                         if s == self.color {
-                            me += Self::WEIGHTS[y][x];
+                            me += Self::DEFAULT_WEIGHTS[y][x];
                         } else if s == self.color.opposite() {
-                            enemy += Self::WEIGHTS[y][x];
+                            enemy += self.weights[y][x];
                         }
                     }
                 }

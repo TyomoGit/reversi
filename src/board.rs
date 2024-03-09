@@ -28,7 +28,7 @@ pub enum ReversiError {
     InvalidMove,
     IndexOutOfBound,
     NoStoneToFlip,
-    NextPlayerCantPutStone,
+    NextPlayerCantPutStone(Stone),
 
     ComputerTurnIsOk(Box<dyn ReversiBoard>),
 
@@ -43,7 +43,7 @@ impl Clone for ReversiError {
             ReversiError::InvalidMove => ReversiError::InvalidMove,
             ReversiError::IndexOutOfBound => ReversiError::IndexOutOfBound,
             ReversiError::NoStoneToFlip => ReversiError::NoStoneToFlip,
-            ReversiError::NextPlayerCantPutStone => ReversiError::NextPlayerCantPutStone,
+            ReversiError::NextPlayerCantPutStone(stone) => ReversiError::NextPlayerCantPutStone(*stone),
             ReversiError::ComputerTurnIsOk(board) => {
                 ReversiError::ComputerTurnIsOk(dyn_clone::clone_box(board.as_ref()))
             }
@@ -60,7 +60,6 @@ impl PartialEq for ReversiError {
             | ReversiError::InvalidMove
             | ReversiError::IndexOutOfBound
             | ReversiError::NoStoneToFlip
-            | ReversiError::NextPlayerCantPutStone
             | ReversiError::GameOverWithDraw => {
                 std::mem::discriminant(self) == std::mem::discriminant(other)
             }
@@ -72,6 +71,13 @@ impl PartialEq for ReversiError {
 
                 std::mem::discriminant(self) == std::mem::discriminant(other)
                     && winner == other_winner
+            }
+            Self::NextPlayerCantPutStone(stone) => {
+                let ReversiError::NextPlayerCantPutStone(other_stone) = other else {
+                    return false;
+                };
+
+                std::mem::discriminant(self) == std::mem::discriminant(other) && stone == other_stone
             }
         }
     }
@@ -269,7 +275,7 @@ impl ReversiBoard for ArrayBasedBoard {
             }
 
             // Next next player(the player who called this function) can place stones
-            return Err(ReversiError::NextPlayerCantPutStone);
+            return Err(ReversiError::NextPlayerCantPutStone(player.opposite()));
         }
 
         if self.count(player.opposite()) == 0 {
@@ -392,7 +398,7 @@ mod tests {
 
         assert_eq!(
             format!("{:?}", &board as &dyn ReversiBoard),
-            "........\n........\n........\n...WB...\n...BW...\n........\n........\n........\n"
+            "[][][][][][][][]\n[][][][][][][][]\n[][][][][][][][]\n[][][]⚪︎⚫︎[][][]\n[][][]⚫︎⚪︎[][][]\n[][][][][][][][]\n[][][][][][][][]\n[][][][][][][][]\n"
         );
     }
 }

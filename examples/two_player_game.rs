@@ -1,13 +1,14 @@
 use reversi::{
     board::ReversiError,
-    computer::{PlayerType, SimpleComputer, WeightedComputer},
-    game::SimpleReversiGame,
+    computer::{PlayerType, WeightedComputer},
+    game::{PlayerManager, SimpleReversiGame},
     stone::Stone,
 };
 use std::io::stdin;
 
 fn main() {
-    let mut game = SimpleReversiGame::new(
+    let mut game = SimpleReversiGame::new();
+    let player_mgr = PlayerManager::new(
         PlayerType::Human,
         PlayerType::Computer(Box::new(WeightedComputer::new(Stone::White))),
     );
@@ -23,29 +24,14 @@ fn main() {
             }
         );
 
-        let mut buff = String::new();
-        stdin().read_line(&mut buff).unwrap();
-        let mut split = buff.trim().split(' ');
-
-        let Some(x) = split.next() else {
-            continue;
-        };
-        let Some(y) = split.next() else {
-            continue;
-        };
-
-        let Some(x) = x.chars().next() else {
-            continue;
-        };
-        let Ok(y) = y.parse::<usize>() else {
-            continue;
-        };
-        let y = y - 1;
-
-        let x = if x.is_ascii_uppercase() {
-            x as usize - 'A' as usize
+        let (x, y) = if let Some(point) = player_mgr.decide(game.board(), game.turn()) {
+            (point.x, point.y)
         } else {
-            x as usize - 'a' as usize
+            let Some(xy) = read_input() else {
+                continue;
+            };
+
+            xy
         };
 
         let Err(error) = game.put_stone(x, y) else {
@@ -60,9 +46,8 @@ fn main() {
                 println!("{:?}", error);
             }
 
-            ReversiError::NextPlayerCantPutStone => {
-                game.take_turn().unwrap();
-                println!("{:?}", error);
+            ReversiError::NextPlayerCantPutStone(stone) => {
+                println!("{:?}: {} cannot put stone.", error, stone);
             }
 
             ReversiError::GameOverWithWinner(winner) => {
@@ -82,4 +67,33 @@ fn main() {
             }
         }
     }
+}
+
+fn read_input() -> Option<(usize, usize)> {
+    let mut buff = String::new();
+        stdin().read_line(&mut buff).unwrap();
+        let mut split = buff.trim().split(' ');
+
+        let Some(x) = split.next() else {
+            return None;
+        };
+        let Some(y) = split.next() else {
+            return None;
+        };
+
+        let Some(x) = x.chars().next() else {
+            return None;
+        };
+        let Ok(y) = y.parse::<usize>() else {
+            return None;
+        };
+        let y = y - 1;
+
+        let x = if x.is_ascii_uppercase() {
+            x as usize - 'A' as usize
+        } else {
+            x as usize - 'a' as usize
+        };
+
+        Some((x, y))
 }
